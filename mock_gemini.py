@@ -1,54 +1,54 @@
-def mock_gemini_response(df_columns):
-    text = ""
+def mock_gemini_response(columns, question: str):
+    q = (question or "").lower()
 
-    text += "ANALYSIS_PLAN:\n"
-    text += "- Step 1: Inspect dataset columns and types\n"
-    text += "- Step 2: Check missing values\n"
-    text += "- Step 3: Summary stats for numeric columns\n"
-    text += "- Step 4: Plot histogram or category counts\n\n"
+    # simple routing based on keywords
+    if "country" in q:
+        code = """
+import matplotlib.pyplot as plt
 
-    text += "PYTHON_CODE:\n"
-    text += "```python\n"
-    text += "import pandas as pd\n"
-    text += "import matplotlib.pyplot as plt\n\n"
+counts = df['Country'].value_counts().head(10)
+plt.figure()
+counts.plot(kind='bar')
+plt.title('Top 10 Countries by Customer Count')
+plt.xlabel('Country')
+plt.ylabel('Customers')
+"""
+    elif "city" in q:
+        code = """
+import matplotlib.pyplot as plt
 
-    text += "print('Columns:', list(df.columns))\n\n"
+counts = df['City'].value_counts().head(10)
+plt.figure()
+counts.plot(kind='bar')
+plt.title('Top 10 Cities by Customer Count')
+plt.xlabel('City')
+plt.ylabel('Customers')
+plt.xticks(rotation=45, ha='right')
+"""
+    elif "trend" in q or "time" in q or "date" in q or "subscription" in q:
+        code = """
+import matplotlib.pyplot as plt
+import pandas as pd
 
-    text += "# Missing values\n"
-    text += "missing = df.isna().sum().sort_values(ascending=False)\n"
-    text += "print('\\nMissing values (top):')\n"
-    text += "print(missing.head(10))\n\n"
+d = df.copy()
+d['Subscription Date'] = pd.to_datetime(d['Subscription Date'], errors='coerce')
+d = d.dropna(subset=['Subscription Date'])
+d['Year'] = d['Subscription Date'].dt.year
+counts = d['Year'].value_counts().sort_index()
 
-    text += "# Numeric stats\n"
-    text += "num_cols = df.select_dtypes(include='number').columns\n"
-    text += "if len(num_cols) > 0:\n"
-    text += "    print('\\nNumeric summary stats:')\n"
-    text += "    print(df[num_cols].describe().T)\n\n"
+plt.figure()
+plt.plot(counts.index, counts.values, marker='o')
+plt.title('Subscriptions per Year')
+plt.xlabel('Year')
+plt.ylabel('Customers')
+"""
+    else:
+        code = """
+import matplotlib.pyplot as plt
 
-    text += "    col = num_cols[0]\n"
-    text += "    plt.figure()\n"
-    text += "    df[col].dropna().hist(bins=20)\n"
-    text += "    plt.title(f'Distribution of {col}')\n"
-    text += "    plt.xlabel(col)\n"
-    text += "    plt.ylabel('Count')\n"
-    text += "    plt.tight_layout()\n"
-    text += "else:\n"
-    text += "    cat_cols = df.select_dtypes(exclude='number').columns\n"
-    text += "    if len(cat_cols) > 0:\n"
-    text += "        col = cat_cols[0]\n"
-    text += "        top = df[col].astype(str).value_counts().head(10)\n"
-    text += "        plt.figure()\n"
-    text += "        top.plot(kind='bar')\n"
-    text += "        plt.title(f'Top 10 categories for {col}')\n"
-    text += "        plt.xlabel(col)\n"
-    text += "        plt.ylabel('Count')\n"
-    text += "        plt.tight_layout()\n"
+plt.figure()
+df.select_dtypes(include='number').hist()
+plt.suptitle('Numeric Distributions')
+"""
 
-    text += "```\n\n"
-
-    text += "INSIGHTS:\n"
-    text += "- Missing values were computed per column.\n"
-    text += "- Summary statistics were generated for numeric columns.\n"
-    text += "- At least one visualization was produced.\n"
-
-    return text
+    return f"```python\n{code}\n```"
